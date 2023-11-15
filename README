@@ -1,0 +1,168 @@
+####################################################
+####################################################
+#####
+#####     RASPBIAN (BUSTER) on RASPBERRY PI 4
+#####
+####################################################
+####################################################
+
+# out of the box, from terminal (click on terminal icon), set a password (default password is "raspberry", then become root, and update and upgrade all packages, then enable ssh automatic start, then check the ip address you will connect ssh later
+
+passwd
+sudo su
+
+#####################################
+apt-get clean
+sudo apt update --allow-releaseinfo-change
+sudo apt-get update
+sudo apt-get upgrade
+sudo apt-get dist-upgrade
+sudo apt autoremove
+sudo sync
+sudo sync
+sudo systemctl enable ssh
+sudo sync
+sudo ip addr sh
+sudo reboot
+
+#####################################
+#then, after reboot, connect ssh from your desktop 
+
+$ ssh pi@192.168.1.245
+pi@192.168.1.245's password: 
+
+pi@raspberrypi:~ $ sudo su
+root@raspberrypi:/home/pi# 
+
+#####################################
+
+
+# to compile, as root (following is for ubuntu 20.04, so, please use a debian derivative distribution and adapt the package names if needed):
+# to compile, as root 
+
+##########################################################
+apt-get clean
+apt-get -y update
+apt-get -y upgrade
+apt-get install -y dpkg-dev fakeroot build-essential wget devscripts git
+apt-get install -y make cmake pkg-config git libssl-dev wget ca-certificates libz-dev
+apt-get install -y libopus-dev libasound2-dev libmosquitto-dev libspandsp-dev libpulse-dev
+apt-get install -y libopus0 ca-certificates openssl libasound2 libmosquitto1 libspandsp2 libpulse0 pulseaudio
+apt-get install -y libavcodec-dev libavdevice-dev libavformat-dev
+apt-get install -y gstreamer1.0-alsa gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-tools gstreamer1.0-x libgstreamer-plugins-base1.0-0 libgstreamer-plugins-base1.0-dev libgstreamer1.0-0 libgstreamer1.0-dev
+apt-get install -y libsndfile1-dev libv4l-dev netcat libvpx-dev
+##########################################################
+
+cd /usr/src
+
+##########################################################
+wget https://github.com/baresip/re/archive/refs/tags/v3.5.1.tar.gz
+tar xzf v3.5.1.tar.gz
+cd re-3.5.1/
+cmake -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j
+cmake --install build
+ldconfig
+##########################################################
+
+cd ..
+
+##########################################################
+rm v3.5.1.tar.gz
+wget https://github.com/baresip/baresip/archive/refs/tags/v3.5.1.tar.gz
+tar xzf v3.5.1.tar.gz
+cd baresip-3.5.1/
+cmake -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j
+cmake --install build
+ldconfig
+
+exit
+
+exit
+
+
+##########################################################
+##########################################################
+##########################################################
+
+#then, from your desktop, tranfer baresipconf_raspberry4.tgz to the raspberry
+$ scp baresipconf_raspberry4.tgz pi@192.168.1.245:/home/pi/
+
+
+##########################################################
+##########################################################
+##########################################################
+
+# reconnect ssh from your desktop to raspb4
+
+$ ssh pi@192.168.1.245
+pi@192.168.1.245's password: 
+
+pi@raspberrypi:~ $ 
+pi@raspberrypi:~ $ ls
+baresipconf_raspberry4.tgz  Desktop    Downloads  Pictures  Templates  Videos
+Bookshelf                   Documents  Music      Public   
+
+##########################################################
+
+# then unpack the baresipconf_raspberry4.tgz
+tar xzf baresipconf_raspberry4.tgz 
+cd baresipconf_raspberry4/
+
+
+##########################################################
+##########################################################
+##########################################################
+
+# connect USB a webcam with microphone
+#
+# check the recording alsa device
+
+arecord -L |grep plughw
+
+# edit audio_source into /home/pi/baresipconf_raspberry4/config
+
+
+# check the playing alsa device
+
+aplay -L |grep plughw
+
+# edit audio_player and audio_alert into /home/pi/baresipconf_raspberry4/config
+#
+#### eg:
+###audio_player            alsa,plughw:CARD=Headphones,DEV=0
+###audio_source            alsa,plughw:CARD=Webcam,DEV=0
+###audio_alert             alsa,plughw:CARD=Headphones,DEV=0
+
+# if needed, edit the video_source into /home/pi/baresipconf_raspberry4/config
+
+#### eg:
+###video_source            v4l2,/dev/video0
+
+#####################################
+
+
+
+# USAGE:
+
+# /home/pi/baresipconf_raspberry4 in this example is the directory containing baresip config, account, etc files
+# you can move it to whatever directory
+#
+# edit the file /home/pi/baresipconf_raspberry4/config and assign the correct audio and video devices, eg: audio_player, audio_source, audio_alert and video_source
+# pay attention at ALL lines AUDIO and VIDEO in config file, there are comments
+
+# after editing the config file
+
+# to start the baresip daemon
+baresip -a SIP.js -d -f /home/pi/baresipconf_raspberry4 ; reset
+
+# to begin the videocall:
+echo "/dial 9000" | netcat -N 127.0.0.1 5555
+
+# to end the videocall:
+echo "/hangup" | netcat -N 127.0.0.1 5555
+
+# to stop the baresip daemon: (you will need to restart it if you want to call again):
+echo "/quit" | netcat -N 127.0.0.1 5555 ; killall -9 baresip
+
